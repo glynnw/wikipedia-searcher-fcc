@@ -1,0 +1,70 @@
+// jshint esversion: 6
+
+function addToList(arr) {
+  const list = document.querySelector('.results-list');
+  if (list) {
+    list.innerHTML = ''; // erase the results children;
+    arr.forEach((item) => {
+      const link = document.createElement('a');
+      const li = document.createElement('li');
+      const h3 = document.createElement('h3');
+      const para = document.createElement('p');
+
+      link.href = `https://en.wikipedia.org/wiki/${item.title}`;
+      li.classList.add('result');
+      h3.classList.add('result__title');
+      para.classList.add('result__body');
+
+      li.appendChild(link);
+      link.appendChild(h3);
+      link.appendChild(para);
+      list.appendChild(li);
+
+      h3.innerHTML = item.titlesnippet ? item.titlesnippet : item.title;
+      para.innerHTML = item.snippet;
+    });
+  }
+  return list;
+}
+
+function addSearchInfo(numResults) {
+  const searchInfo = document.querySelector('.searchInfo');
+  searchInfo.innerHTML = "Nothing Found";
+  if(numResults > 0)
+    searchInfo.innerHTML = "Results:"
+}
+
+function handleResponse(data) {
+  try {
+    const searchResults =
+      JSON.parse(data.target.responseText);
+    addSearchInfo(searchResults.query.searchinfo.totalhits);
+    addToList(searchResults.query.search);
+  } catch (e) {
+    console.log(e);
+  }
+}
+
+function createRequest(query) {
+  const url = '//cors-anywhere.herokuapp.com/http://en.wikipedia.com/w/api.php?' +
+    'action=query&format=json&origin=*&list=search' +
+    `&srsearch=${query}&srprop=titlesnippet%7Csnippet`;
+  const request = new XMLHttpRequest();
+  request.open('GET', url, true);
+  request.addEventListener('load', handleResponse);
+  request.addEventListener('error', () => {
+    console.log(`Error in request to: ${url}`);
+  });
+  request.send();
+}
+
+window.addEventListener('load', () => {
+  const input = document.querySelector('.query');
+  Rx.Observable
+    .fromEvent(input, 'keyup')
+    .pluck('target', 'value')
+    .filter(x => x.length > 0)
+    .distinctUntilChanged()
+    .debounce(1000)
+    .subscribe(createRequest);
+});
